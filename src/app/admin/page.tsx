@@ -3,23 +3,39 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-const myEmail = process.env.EMAIL;
-const myPassword = process.env.PASSWORD;
-
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (email === myEmail && password === myPassword) {
-      localStorage.setItem("isLoggedIn", "true");
-      router.push("/admin/dashboard");
-    } else {
-      alert("Invalid email or password");
+    try {
+      // Send email and password to the backend API for verification
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Authentication successful
+        localStorage.setItem("isLoggedIn", "true");
+        router.push("/admin/dashboard");
+      } else {
+        // Invalid credentials
+        setError(data.message || "Invalid email or password");
+      }
+    } catch (error) {
+      setError("An error occurred while logging in.");
+      console.log(error)
     }
   };
 
@@ -32,6 +48,8 @@ export default function AdminLogin() {
         <h2 className="text-center text-white text-xl font-semibold mb-4">
           Admin Login
         </h2>
+
+        {error && <p className="text-red-500 text-center">{error}</p>}
 
         <div className="flex items-center gap-2 p-3 rounded-lg bg-gray-700 shadow-inner">
           <input
