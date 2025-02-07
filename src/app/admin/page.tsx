@@ -3,6 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+const myEmail = process.env.EMAIL;
+const myPassword = process.env.PASSWORD;
+
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -12,7 +15,7 @@ export default function AdminLogin() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (email === "shirazkk8@gmail.com" && password === "comfortydashboard") {
+    if (email === myEmail && password === myPassword) {
       localStorage.setItem("isLoggedIn", "true");
       router.push("/admin/dashboard");
     } else {

@@ -19,6 +19,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "react-hot-toast";
+import { Order } from "../../../../../type";
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
