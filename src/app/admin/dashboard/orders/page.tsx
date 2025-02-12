@@ -6,7 +6,7 @@ import { urlFor } from "@/sanity/lib/image";
 import ProtectedRoute from "@/components/protectedRoute";
 import client from "@/sanity/lib/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Package2, Clock, CheckCircle2, Truck } from "lucide-react";
+import { Package2, Clock, CheckCircle2, Truck, BellPlus } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,16 +19,43 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "react-hot-toast";
-import { Order } from "../../../../../type";
 
-export default function Orders() {
+import { format } from "date-fns";
+
+// Define types for the component state and props
+interface OrderItem {
+  product: {
+    title: string;
+    image: string; // You might want to specify the type of 'image' based on how you handle images in Sanity.
+  };
+  quantity: number;
+}
+
+interface Order {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  zipCode: string;
+  total: number;
+  discount: number;
+  orderDate: string;
+  status: string;
+  cartItems: OrderItem[];
+}
+
+const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [filter, setFilter] = useState("All");
-  const [loading, setloading] = useState(false);
+  const [filter, setFilter] = useState<string>("All");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [newOrders, setNewOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    setloading(true);
+    setLoading(true);
     client
       .fetch(
         `*[_type == "order"]{
@@ -53,18 +80,29 @@ export default function Orders() {
         }
         }`
       )
-      .then((data) => setOrders(data))
+      .then((data: Order[]) => {
+        setOrders(data);
+
+        const todayDate = format(new Date(), "yyyy-MM-dd");
+        const todayOrders = data.filter(
+          (order) => order.orderDate && order.orderDate.startsWith(todayDate)
+        );
+
+        setNewOrders(todayOrders);
+      })
       .catch((error) => {
         console.error("Error fetching orders:", error);
         toast.error("Failed to fetch orders");
       })
-      .finally(() => setloading(false));
+      .finally(() => setLoading(false));
   }, []);
 
   const filteredOrders =
     filter === "All"
       ? orders
-      : orders.filter((order) => order.status === filter);
+      : filter === "New"
+        ? newOrders
+        : orders.filter((order) => order.status === filter);
 
   const toggleOrderDetails = (orderId: string) => {
     setSelectedOrderId((prev) => (prev === orderId ? null : orderId));
@@ -112,12 +150,19 @@ export default function Orders() {
         return <Truck className="w-5 h-5 text-blue-500" />;
       case "success":
         return <CheckCircle2 className="w-5 h-5 text-green-500" />;
+      case "New":
+        return <BellPlus className="w-5 h-5 text-green-500" />;
       default:
         return <Package2 className="w-5 h-5 text-gray-500" />;
     }
   };
 
-  const DeleteButton = ({ orderId }: { orderId: string }) => (
+  // Type for DeleteButton props
+  interface DeleteButtonProps {
+    orderId: string;
+  }
+
+  const DeleteButton: React.FC<DeleteButtonProps> = ({ orderId }) => (
     <AlertDialog>
       <AlertDialogTrigger asChild>
         <button className="text-red-500 hover:text-red-700">
@@ -176,22 +221,24 @@ export default function Orders() {
               <h1 className="text-2xl font-bold text-gray-800">Orders</h1>
             </div>
             <nav className="flex-1 p-4">
-              {["All", "pending", "dispatch", "success"].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setFilter(status)}
-                  className={`w-full mb-2 flex items-center p-3 rounded-lg transition-all ${
-                    filter === status
-                      ? "bg-blue-50 text-blue-600"
-                      : "hover:bg-gray-50"
-                  }`}
-                >
-                  {getStatusIcon(status === "All" ? null : status)}
-                  <span className="ml-3 font-medium">
-                    {status.charAt(0).toUpperCase() + status.slice(1)} Orders
-                  </span>
-                </button>
-              ))}
+              {["All", "New", "pending", "dispatch", "success"].map(
+                (status) => (
+                  <button
+                    key={status}
+                    onClick={() => setFilter(status)}
+                    className={`w-full mb-2 flex items-center p-3 rounded-lg transition-all ${
+                      filter === status
+                        ? "bg-blue-50 text-blue-600"
+                        : "hover:bg-gray-50"
+                    }`}
+                  >
+                    {getStatusIcon(status === "All" ? null : status)}
+                    <span className="ml-3 font-medium">
+                      {status.charAt(0).toUpperCase() + status.slice(1)} Orders
+                    </span>
+                  </button>
+                )
+              )}
             </nav>
           </div>
 
@@ -293,4 +340,6 @@ export default function Orders() {
       </div>
     </ProtectedRoute>
   );
-}
+};
+
+export default Orders;
